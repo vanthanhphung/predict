@@ -59,7 +59,7 @@ def predict_process():
             response = requests.request("POST", self.url, headers=self.headers, data=self.payload)
             return response.json()['token']
 
-    # token = Login(username="duy1851999@gmail.com", password="duythang10").requestLogin()
+    
 
     class Temperature:
         def __init__(
@@ -73,7 +73,7 @@ def predict_process():
         ) -> None:
             self.url = f"{BASE_URL}plugins/telemetry/DEVICE/{deviceID}/values/timeseries?interval=600000&limit=700&agg=AVG&orderBy=ASC&useStrictDataTypes=true&keys={keys}&startTs={startTs}&endTs={endTs}"
             self.payload = {}
-            token = Login(username="duy1851999@gmail.com", password="duythang10").requestLogin()
+            token = Login(username="123", password="1").requestLogin()
             self.headers = {
                 'X-Authorization': 'Bearer ' + token
             }
