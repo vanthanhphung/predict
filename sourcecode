@@ -1,0 +1,226 @@
+from flask import Flask
+from flask_cors import CORS, cross_origin
+from flask import request
+
+import requests
+import json
+from typing import Dict, List, Any
+from pandas import DataFrame
+from datetime import datetime
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import os.path
+from os import path
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.layers import Dropout
+
+
+
+
+
+
+
+
+# Khởi tạo Flask Server Backend
+app = Flask(__name__)
+
+# Apply Flask CORS
+CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+
+# http://127.0.0.1/add
+# http://127.0.0.1/minus
+# http://127.0.0.1/multi
+# http://127.0.0.1/div
+
+
+
+@app.route('/predict', methods=['GET'] )
+@cross_origin(origin='*')
+def predict_process():
+    BASE_URL = "http://103.28.32.80:8080/api/"
+
+    class Login:
+        def __init__(self, username: str, password: str) -> None:
+            self.url = f"{BASE_URL}auth/login"
+
+            self.payload = json.dumps({
+                "username": username,
+                "password": password
+            })
+            self.headers = {
+                'Content-Type': 'application/json'
+            }
+
+        def requestLogin(self) -> str:
+            response = requests.request("POST", self.url, headers=self.headers, data=self.payload)
+            return response.json()['token']
+
+    # token = Login(username="duy1851999@gmail.com", password="duythang10").requestLogin()
+
+    class Temperature:
+        def __init__(
+                self,
+                deviceID: str = '1e527780-7a0c-11ec-8b8c-a7e2e87907a2',
+                keys: str = 'temp',
+                startTs: int = 1639879499370,
+                endTs: int = 1639965871667,
+                username: str = 'duy1851999@gmail.com',
+                password: str = 'duythang10'
+        ) -> None:
+            self.url = f"{BASE_URL}plugins/telemetry/DEVICE/{deviceID}/values/timeseries?interval=600000&limit=700&agg=AVG&orderBy=ASC&useStrictDataTypes=true&keys={keys}&startTs={startTs}&endTs={endTs}"
+            self.payload = {}
+            token = Login(username="duy1851999@gmail.com", password="duythang10").requestLogin()
+            self.headers = {
+                'X-Authorization': 'Bearer ' + token
+            }
+
+        def getTemperature(self) -> Dict[str, List[Any]]:
+            response = requests.request("GET", self.url, headers=self.headers, data=self.payload)
+            return response.json()
+
+    # Train data
+    keys = 'temp'
+    now = now = datetime.now()
+    startTs = datetime.timestamp(now) * 1000 - 24 * 3600000 * 4
+    endTs = datetime.timestamp(now) * 1000
+    # print(startTs, endTs)
+    temperature = Temperature(keys=keys, startTs=int(startTs), endTs=int(endTs)).getTemperature()[keys]
+    ts = list()
+    temp = list()
+    for i in range(len(temperature)):
+        ts.append(datetime.fromtimestamp(int(temperature[i]['ts']) / 1000))
+        temp.append(temperature[i]['value'])
+
+    data_temperature = {'ts': ts, 'temp': temp}
+    df_temp = DataFrame.from_dict(data_temperature)
+    df_temp = df_temp.set_index(['ts'])
+    # print(df_temp)
+    df_temp.to_csv('temperature.csv')
+
+    # doc du lieu
+    dataset = pd.read_csv('temperature.csv')
+    dataset_train = dataset.head(477)
+    training_set = dataset_train.iloc[:477, 1:2].values
+
+    #
+    # print(training_set)
+    # print(real_stock_price)
+
+    # process data
+    from sklearn.preprocessing import MinMaxScaler
+    sc = MinMaxScaler(feature_range=(0, 1))
+    training_set_scaled = sc.fit_transform(training_set)
+
+    # Tao du lieu train, X = 60 time steps, Y =  1 time step
+    X_train = []
+    y_train = []
+    no_of_sample = len(training_set)
+
+    for i in range(90, no_of_sample):
+        X_train.append(training_set_scaled[i - 90:i, 0])
+        y_train.append(training_set_scaled[i, 0])
+
+    X_train, y_train = np.array(X_train), np.array(y_train)
+
+    X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+
+    # Xay dung model LSTM
+    regressor = Sequential()
+    regressor.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
+    regressor.add(Dropout(0.2))
+    regressor.add(LSTM(units=50, return_sequences=True))
+    regressor.add(Dropout(0.2))
+    regressor.add(LSTM(units=50, return_sequences=True))
+    regressor.add(Dropout(0.2))
+    regressor.add(LSTM(units=50))
+    regressor.add(Dropout(0.2))
+    regressor.add(Dense(units=1))
+    regressor.compile(optimizer='adam', loss='mean_squared_error')
+
+    # Neu ton tai file model thi load
+    if path.exists("mymodel.h5"):
+        regressor.load_weights("mymodel.h5")
+    else:
+        # Con khong thi train
+        regressor.fit(X_train, y_train, epochs=120, batch_size=32)
+        regressor.save("mymodel.h5")
+
+    # Load du lieu tu 1/1/2019 - 2/10/2019
+    dataset_test = dataset.tail(100)
+    real_data = dataset_test.iloc[-102:, 1:2].values
+
+    # Tien hanh du doan
+    dataset_total = pd.concat((dataset_train['temp'], dataset_test['temp']), axis=0)
+    inputs = dataset_total[len(dataset_total) - len(dataset_test) - 90:].values
+    inputs = inputs.reshape(-1, 1)
+    inputs = sc.transform(inputs)
+
+    # print(dataset_train)
+    # print(dataset_test)
+    # print(training_set)
+    # print(real_data)
+
+    X_test = []
+    no_of_sample = len(inputs)
+
+    for i in range(90, no_of_sample):
+        X_test.append(inputs[i - 90:i, 0])
+
+    X_test = np.array(X_test)
+    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+    predicted_data = regressor.predict(X_test)
+    predicted_data = sc.inverse_transform(predicted_data)
+
+    # Ve bieu do gia that va gia du doan
+    # plt.plot(real_data, color='red', label='Real Temperature')
+    # plt.plot(predicted_data, color='blue', label='Predicted Temperature')
+    # plt.title('Temperature Storages Prediction')
+    # plt.xlabel('Time')
+    # plt.ylabel('Temperature')
+    # plt.legend()
+    # plt.show()
+
+    # Du doan tiep gia cac gio tiep theo
+
+    dataset_test = dataset_test['temp'][len(dataset_test) - 60:len(dataset_test)].to_numpy()
+    dataset_test = np.array(dataset_test)
+
+    inputs = dataset_test
+    inputs = inputs.reshape(-1, 1)
+    inputs = sc.transform(inputs)
+
+    i = 0
+    while i < 6:
+        X_test = []
+        no_of_sample = len(dataset_test)
+
+        # Lay du lieu cuoi cung
+        X_test.append(inputs[no_of_sample - 60:no_of_sample, 0])
+        X_test = np.array(X_test)
+        X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
+        # Du doan gia
+        predicted_temp = regressor.predict(X_test)
+
+        # chuyen gia tu khoang (0,1) thanh gia that
+        predicted_temp = sc.inverse_transform(predicted_temp)
+        #
+        #     # Them ngay hien tai vao
+        dataset_test = np.append(dataset_test, predicted_temp[0], axis=0)
+        inputs = dataset_test
+        inputs = inputs.reshape(-1, 1)
+        inputs = sc.transform(inputs)
+
+
+    return 'Temperature ' + str(i), predicted_temp[0][0]
+
+
+
+
+# Start Backend
+if __name__ == '__main__':
+    app.run(host='127.0.0.1', port='6868')
