@@ -68,8 +68,8 @@ def predict_process():
                 keys: str = 'temp',
                 startTs: int = 1639879499370,
                 endTs: int = 1639965871667,
-                username: str = 'duy1851999@gmail.com',
-                password: str = 'duythang10'
+                username: str = '123',
+                password: str = '1'
         ) -> None:
             self.url = f"{BASE_URL}plugins/telemetry/DEVICE/{deviceID}/values/timeseries?interval=600000&limit=700&agg=AVG&orderBy=ASC&useStrictDataTypes=true&keys={keys}&startTs={startTs}&endTs={endTs}"
             self.payload = {}
