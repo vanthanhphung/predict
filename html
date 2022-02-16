@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="viewport" content="width=device-width" />
+        <meta http-equiv="X-UA-Compatible" content="IE"/>
+        <link rel="stylesheet" href="./css/style.css">
+        <title>Control LED with Raspberry Pi using RS485 - Webserver </title>
+    </head>
+        <body>
+
+            <div id="wrapper" class="main1 open">
+                <h1> Student Login Form </h1>
+                <form>  
+                <div class="container">
+                <div class="login-form">
+                    <form action="" method="post">
+                        <h1>Đăng nhập vào website</h1>
+                        <div class="input-box">
+                            <i ></i>
+                            <input type="text" placeholder="Nhập username">
+                        </div>
+                        <div class="input-box">
+                            <i ></i>
+                            <input type="password" placeholder="Nhập mật khẩu">
+                        </div>
+                        <div class="btn-box">
+                            <button type="submit" class="submitHao">
+                                Đăng nhập
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                </div>  
+                </form>  
+            </div>
+
+
+
+           <div class="modal2">
+                <h1>Demo điều khiển chiếu sáng</h1>
+                <button class="logoutHao">Log out</button>
+                 <div class = "container">
+                    <div>
+                    <h1>
+                        ĐÈN 1
+                    </h1>
+                    <form method="get" action="index.php">
+                    <input class ="green" type="submit"  value="Turn LED1 On" name="1on">
+                <input class=" red" type="submit"  value="Turn LED1 Off" name="1off">
+                
+                <br /> <br />
+                <input class="green" type="submit" value="Turn LED2 On" name="2on">
+                <input class="red" type="submit" value="Turn LED2 Off" name="2off">
+                      <br /> <br />
+                <input class="green" type="submit" value="Turn LED3 On" name="3on">
+                <input class="red" type="submit" value="Turn LED3 Off" name="3off">
+                <br /> <br />
+                    <input class="green" type="submit" value="Turn LED4 On" name="4on">
+                <input class="red" type="submit" value="Turn LED4 Off" name="4off">
+                <br /> <br />
+                </form>
+                    </div>
+    
+                <div>
+                    <h1>
+                        ĐÈN 2
+                    </h1>
+                    <form method="get" action="index.php">
+                    <input class ="green" type="submit"  value="Turn DEVICE1 On" name="1bon">
+                <input class=" red" type="submit"  value="Turn DEVICE1 Off" name="1boff">
+                </form>
+                    </div>
+                    </div>
+           </div>
+            
+       </body>
+       <script>
+        const mainValue = document.querySelector('.modal2')
+        const loginValue = document.querySelector('.main1')
+
+        function login() {
+            loginValue.classList.remove('open')
+            mainValue.classList.add('open')
+        }
+
+
+        function logout() {
+            loginValue.classList.add('open')
+            mainValue.classList.remove('open')
+        }
+
+        const submitGon = document.querySelector('.submitHao');
+        const logoutGon = document.querySelector('.logoutHao');
+        
+        submitGon.addEventListener('click', login)
+        logoutGon.addEventListener('click', logout)
+
+       </script>
+
+    </html>
+    
+ 
